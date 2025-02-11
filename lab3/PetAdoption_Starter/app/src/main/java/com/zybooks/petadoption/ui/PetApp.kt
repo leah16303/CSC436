@@ -1,5 +1,7 @@
 package com.zybooks.petadoption.ui
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,52 +13,55 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.zybooks.petadoption.data.Pet
 import com.zybooks.petadoption.data.PetDataSource
 import com.zybooks.petadoption.data.PetGender
 import com.zybooks.petadoption.ui.theme.PetAdoptionTheme
 import kotlinx.serialization.Serializable
-
 sealed class Routes {
    @Serializable
    data object List
 
    @Serializable
-   data object Detail
+   data class Detail(
+      val petId: Int
+   )
 
    @Serializable
-   data object Adopt
+   data class Adopt(
+      val petId: Int
+   )
 }
 
 @Composable
-fun PetApp(
-   petViewModel: PetViewModel = viewModel()
-) {
+fun PetApp() {
    val navController = rememberNavController()
 
    NavHost(
@@ -65,28 +70,33 @@ fun PetApp(
    ) {
       composable<Routes.List> {
          ListScreen(
-            petList = petViewModel.petList,
             onImageClick = { pet ->
-               petViewModel.selectedPet = pet
-               navController.navigate(Routes.Detail)
-
+               navController.navigate(
+                  Routes.Detail(pet.id)
+               )
             }
          )
       }
-      composable<Routes.Detail> {
+      composable<Routes.Detail> { backstackEntry ->
+         val details: Routes.Detail = backstackEntry.toRoute()
+
          DetailScreen(
-            pet = petViewModel.selectedPet,
+            petId = details.petId,
             onAdoptClick = {
-               navController.navigate(Routes.Adopt)
+               navController.navigate(
+                  Routes.Adopt(details.petId)
+               )
             },
             onUpClick = {
                navController.navigateUp()
             }
          )
       }
-      composable<Routes.Adopt> {
+      composable<Routes.Adopt> { backstackEntry ->
+         val adopt: Routes.Adopt = backstackEntry.toRoute()
+
          AdoptScreen(
-            pet = petViewModel.selectedPet,
+            petId = adopt.petId,
             onUpClick = {
                navController.navigateUp()
             }
@@ -120,9 +130,9 @@ fun PetAppBar(
    )
 }
 
+
 @Composable
 fun ListScreen(
-   petList: List<Pet>,
    onImageClick: (Pet) -> Unit,
    modifier: Modifier = Modifier,
    viewModel: ListViewModel = viewModel()
@@ -153,14 +163,13 @@ fun ListScreen(
    }
 }
 
-
 @Composable
 fun DetailScreen(
-   petId: Int,
-   onAdoptClick: () -> Unit,
-   modifier: Modifier = Modifier,
-   viewModel: DetailViewModel = viewModel(),
-   onUpClick: () -> Unit = { }
+petId: Int,
+onAdoptClick: () -> Unit,
+modifier: Modifier = Modifier,
+viewModel: DetailViewModel = viewModel(),
+onUpClick: () -> Unit = { }
 ) {
    val pet = viewModel.getPet(petId)
    val gender = if (pet.gender == PetGender.MALE) "Male" else "Female"
@@ -216,29 +225,7 @@ fun DetailScreen(
    }
 }
 
-@Preview
-@Composable
-fun PreviewDetailScreen() {
-   val pet = PetDataSource().loadPets()[0]
-   PetAdoptionTheme {
-      DetailScreen(
-         pet = pet,
-         onAdoptClick = { }
-      )
-   }
-}
 
-
-@Preview
-@Composable
-fun PreviewListScreen() {
-   PetAdoptionTheme {
-      ListScreen(
-         petList = PetDataSource().loadPets(),
-         onImageClick = { }
-      )
-   }
-}
 
 
 @Composable
@@ -249,6 +236,7 @@ fun AdoptScreen(
    onUpClick: () -> Unit = { }
 ) {
    val pet = viewModel.getPet(petId)
+   val context = LocalContext.current
    Scaffold(
       topBar = {
          PetAppBar(
@@ -279,7 +267,7 @@ fun AdoptScreen(
             modifier = modifier.padding(6.dp),
          )
          Button(
-            onClick = { },
+            onClick = { shareAdoption(context, pet) },
             modifier = modifier.padding(6.dp)
          ) {
             Icon(Icons.Default.Share, null)
@@ -289,11 +277,46 @@ fun AdoptScreen(
    }
 }
 
+fun shareAdoption(context: Context, pet: Pet) {
+   val intent = Intent(Intent.ACTION_SEND).apply {
+      type = "text/plain"
+      putExtra(Intent.EXTRA_SUBJECT, "Meet ${pet.name}!")
+      putExtra(Intent.EXTRA_TEXT, "I've adopted ${pet.name}!")
+   }
+
+   context.startActivity(
+      Intent.createChooser(intent, "Pet Adoption")
+   )
+}
+
+@Preview
+@Composable
+fun PreviewListScreen() {
+   PetAdoptionTheme {
+      ListScreen(
+         //petList = PetDataSource().loadPets(),
+         onImageClick = {}
+      )
+   }
+}
+
+@Preview
+@Composable
+fun PreviewDetailScreen() {
+   val pet = PetDataSource().loadPets()[0]
+   PetAdoptionTheme {
+      DetailScreen(
+         petId = pet.id,
+         onAdoptClick = {}
+      )
+   }
+}
+
 @Preview
 @Composable
 fun PreviewAdoptScreen() {
    val pet = PetDataSource().loadPets()[0]
    PetAdoptionTheme {
-      AdoptScreen(pet)
+      AdoptScreen(pet.id)
    }
 }
