@@ -17,6 +17,7 @@ const val NOTIFICATION_ID = 0
 
 class TimerWorker(context: Context, parameters: WorkerParameters) :
     CoroutineWorker(context, parameters) {
+
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -49,7 +50,8 @@ class TimerWorker(context: Context, parameters: WorkerParameters) :
 
     private fun createTimerNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID_TIMER, "Timer Channel",
+            val channel = NotificationChannel(
+                CHANNEL_ID_TIMER, "Timer Channel",
                 NotificationManager.IMPORTANCE_LOW)
             channel.description = "Displays how much time is left"
 
@@ -61,7 +63,7 @@ class TimerWorker(context: Context, parameters: WorkerParameters) :
     private fun postTimerNotification(text: String) {
         // Create notification with various properties
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID_TIMER)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(applicationContext.getString(R.string.app_name))
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_LOW)
