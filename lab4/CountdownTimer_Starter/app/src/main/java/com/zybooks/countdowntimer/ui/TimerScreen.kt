@@ -89,7 +89,7 @@ fun TimerScreen(
    }
 }
 
-@Preview(showBackground = true)
+
 @Composable
 fun TimerScreenPreview() {
    CountdownTimerTheme {
